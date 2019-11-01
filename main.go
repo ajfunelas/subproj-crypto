@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"database/sql"
 
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 const (
@@ -18,7 +18,7 @@ const (
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 	  "password=%s dbname=%s sslmode=disable",
 	  host, port, user, password, dbname)
-	db, err := sql.Open("postgres", psqlInfo)
+	db, err := sqlx.Open("postgres", psqlInfo)
 	if err != nil {
 	  panic(err)
 	}
@@ -32,7 +32,7 @@ const (
 	fmt.Println(dbDriver.db)
 	fmt.Println("Successfully connected!")
 	fmt.Println("Server is Running!")
-	dbDriver.setGet()
+	dbDriver.startRoutes()
   }
 
 

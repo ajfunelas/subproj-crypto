@@ -6,20 +6,22 @@ import (
     "encoding/json"
     "time"
     "database/sql"
+    "log"
 	// "net/http"
 	// "encoding/json"
-
+	
     "github.com/go-chi/chi"
-    // "github.com/gofrs/uuid"
+    uuid "github.com/gofrs/uuid"
 )
-
-
-func (dbDriver *DbDriver) setGet() {
+func (dbDriver *DbDriver) startRoutes() {
     r := getRouter()
     r.Post("/api/favourites/list", dbDriver.getFaves)
-    http.ListenAndServe(":8080", r)
+	r.Post("/api/favourites/toggle", dbDriver.tglFave)
+	r.Post("/api/favourites/signin", dbDriver.signinHandler)
+	r.Post("/api/favourites/signup", dbDriver.signUpHandler)
+	http.ListenAndServe(":8080", r)
+	
 }
-
 // Get Products Function
 func getProducts() []*Product {
 	resp, err := http.Get("https://api.pro.coinbase.com//products")
@@ -148,7 +150,112 @@ func getRouter() chi.Router{
 return r
 }
 
+// toggle faves
 func (db *DbDriver) tglFave(w http.ResponseWriter, r *http.Request) {
+	var (
+		faveId string
+		success    bool
+		tag        string
+	)
+	var userfave UserFave
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&userfave)
+	if err != nil {
+		panic(err)
+	}
+	id, err := uuid.NewV4()
+	if err != nil {
+		log.Fatalf("UUID create error: %v", err)
+	}
+	tag = "insert"
+	rows, err := db.db.Query("SELECT coin_id from user_favourites where user_id = $1", userfave.UID)
+	if err != nil {
+		tag = "insert"
+	} else {
+		for rows.Next() {
+			err := rows.Scan(&faveId)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if faveId == userfave.COINID {
+                tag = "delete"
+			}
 
+		}
+		err = rows.Err()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	defer rows.Close()
+	success = true
+	if tag == "insert" {
+        fmt.Println("Inserted")
+		sqlStatement := `INSERT INTO user_favourites (id, user_id, coin_id) VALUES ($1, $2, $3)`
+		_, err = db.db.Exec(sqlStatement, id.String(), userfave.UID, userfave.COINID)
+		if err != nil {
+			fmt.Println(err)
+			success = false
+		}
+
+	} else {
+        fmt.Println("Deleted")
+		sqlStatement := `DELETE FROM user_favourites WHERE user_id = $1 AND coin_id = $2`
+		_, err = db.db.Exec(sqlStatement, userfave.UID, userfave.COINID)
+		if err != nil {
+			fmt.Println(err)
+			success = false
+		}
+	}
+	Success := &SuccessOnly{Success: success}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(Success)
 }
 
+
+//Sign In Handler
+func (db *DbDriver) signinHandler(w http.ResponseWriter, r *http.Request) {
+	var user UserInfo
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&user)
+	if err != nil {
+		panic(err)
+	}
+	err = db.db.QueryRow(`SELECT id, username FROM users WHERE email = $1 AND password = $2`, user.Email, user.Password).Scan(&user.ID, &user.Username)
+	if err != nil {
+		fmt.Println("Signin Error!")
+		json.NewEncoder(w).Encode("You failed!")
+		return
+	}
+	fmt.Println("Signed In!")
+	u := UserInfo{ID: user.ID, Username: user.Username, Password: user.Password, Email: user.Email}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(u)
+}
+
+func (db *DbDriver) signUpHandler(w http.ResponseWriter, r *http.Request) {
+	var user UserInfo
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&user)
+	if err != nil {
+		panic(err)
+	}
+	err = db.db.QueryRow(`SELECT id FROM users WHERE username = $1 AND email = $2 `, user.Username, user.Email).Scan(&user.ID)
+	if err != nil {
+		fmt.Println("User does not exist!")
+		// json.NewEncoder(w).Encode("User does not exist!")
+		uid, err := uuid.NewV4()
+		sqlStatement := `INSERT INTO users (id, username, password, email) VALUES($1, $2, $3, $4);`
+		_, err = db.db.Exec(sqlStatement, uid.String(), user.Username, user.Password, user.Email)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	
+	}
+	fmt.Println("Registered")
+	reg := UserInfo{ID: user.ID, Username: user.Username, Email: user.Email, Password: user.Password, }
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(reg)
+}

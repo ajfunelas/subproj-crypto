@@ -1,10 +1,12 @@
 package main
 
-import 
-"database/sql"
+import (
+
+"github.com/jmoiron/sqlx"
+)
 
 type DbDriver struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
 type Ticker struct {
@@ -59,3 +61,20 @@ type ShortTicker struct {
 type UserID struct {
 	UID string `json: "uid"`
 }
+
+type UserFave struct {
+	UID string `json:"uid"`
+	COINID string `json:"coinid"`
+}
+
+type SuccessOnly struct {
+	Success bool
+}
+
+type UserInfo struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
