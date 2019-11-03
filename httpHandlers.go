@@ -249,6 +249,7 @@ func (db *DbDriver) signinHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(u)
 }
 
+// #Sign Up 
 func (db *DbDriver) signUpHandler(w http.ResponseWriter, r *http.Request) {
 	var user UserInfo
 	decoder := json.NewDecoder(r.Body)
