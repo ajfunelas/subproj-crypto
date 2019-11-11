@@ -32,6 +32,7 @@ func (dbDriver *DbDriver) startRoutes() {
 	r.Post("/api/favourites/toggle", dbDriver.tglFave)
 	r.Post("/api/signin", dbDriver.signinHandler)
 	r.Post("/api/signup", dbDriver.signUpHandler)
+	r.Post("/api/getonecoin", dbDriver.getOneCoin)
 
 	
 	http.ListenAndServe(":8080", r)
@@ -52,6 +53,31 @@ func getProducts() []*Product {
 		panic(err)
 	}
 	return products
+}
+
+func (dbDriver *DbDriver) getOneCoin(w http.ResponseWriter, r *http.Request) {
+	var tickData TickerData
+	
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&tickData)
+	if err != nil {
+		fmt.Println(err)
+		return 
+	}
+	err = dbDriver.db.QueryRow(`SELECT * FROM tickers WHERE id = $1`,
+	tickData.ID).Scan(&tickData.ID, &tickData.Price, &tickData.Time, &tickData.Bid,
+	&tickData.Ask, &tickData.Volume, &tickData.Size)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	tickerData := &TickerData{
+		ID: tickData.ID, Price:tickData.Price,
+		Time: tickData.Time, Bid: tickData.Bid, Ask: tickData.Ask,
+		Volume: tickData.Volume, Size: tickData.Size}
+
+	json.NewEncoder(w).Encode(tickerData)
 }
 
 // Populate Ticker Table Function
@@ -114,7 +140,7 @@ func (dbDriver *DbDriver) refreshTickers(tData *TickerData, id string) {
 
 }
 func (db *DbDriver) getFaves(w http.ResponseWriter, r *http.Request) {
-	var (
+	var (	
         userID     UserID
         tickerList []ShortTicker
         tickerId   string
@@ -179,11 +205,12 @@ func (db *DbDriver) tglFave(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	id, err := uuid.NewV4()
+
 	if err != nil {
 		log.Fatalf("UUID create error: %v", err)
 	}
 	tag = "insert"
-	rows, err := db.db.Query("SELECT coin_id from user_favourites where user_id = $1", userfave.UID)
+	rows, err := db.db.Query("SELECT coin_id from user_favourites where user_id = $1", userfave.UserID)
 	if err != nil {
 		tag = "insert"
 	} else {
@@ -192,7 +219,7 @@ func (db *DbDriver) tglFave(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			if faveId == userfave.COINID {
+			if faveId == userfave.CoinID {
                 tag = "delete"
 			}
 
@@ -207,7 +234,7 @@ func (db *DbDriver) tglFave(w http.ResponseWriter, r *http.Request) {
 	if tag == "insert" {
         fmt.Println("Inserted")
 		sqlStatement := `INSERT INTO user_favourites (id, user_id, coin_id) VALUES ($1, $2, $3)`
-		_, err = db.db.Exec(sqlStatement, id.String(), userfave.UID, userfave.COINID)
+		_, err = db.db.Exec(sqlStatement, id.String(), userfave.UserID, userfave.CoinID)
 		if err != nil {
 			fmt.Println(err)
 			success = false
@@ -216,7 +243,7 @@ func (db *DbDriver) tglFave(w http.ResponseWriter, r *http.Request) {
 	} else {
         fmt.Println("Deleted")
 		sqlStatement := `DELETE FROM user_favourites WHERE user_id = $1 AND coin_id = $2`
-		_, err = db.db.Exec(sqlStatement, userfave.UID, userfave.COINID)
+		_, err = db.db.Exec(sqlStatement, userfave.UserID, userfave.CoinID)
 		if err != nil {
 			fmt.Println(err)
 			success = false

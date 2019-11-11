@@ -19,13 +19,13 @@ type Ticker struct {
 	Size    string `json: "volume"`
 }
 type TickerData struct {
-	ID     string
-	Price  string
-	Time   string
-	Bid    string
-	Ask    string
-	Volume string
-	Size   string
+	ID     string	`json: "id"`
+	Price  string	`json: "price"`
+	Time   string	`json: "time"`
+	Bid    string	`json: "bid"`
+	Ask    string	`json: "ask"`
+	Volume string	`json: "volume"`
+	Size   string	`json: "size"`
 }
 
 // coins - query data
@@ -59,12 +59,13 @@ type ShortTicker struct {
 }
 
 type UserID struct {
-	UID string `json: "uid"`
+	UID string `json: "user_id"`
 }
 
 type UserFave struct {
-	UID string `json:"uid"`
-	COINID string `json:"coinid"`
+	ID string `json:"id"`
+	UserID string `json:"user_id"`
+	CoinID string `json:"coin_id`
 }
 
 type SuccessOnly struct {
