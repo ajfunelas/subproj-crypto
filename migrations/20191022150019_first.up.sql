@@ -1,9 +1,9 @@
--- CREATE TABLE USERS (
---     ID INT,
---     USERNAME varchar(255),
---     PASSWORD varchar(255),
---     EMAIL varchar(255)
--- );
+CREATE TABLE users (
+    ID INT,
+    USERNAME varchar(255),
+    PASSWORD varchar(255),
+    EMAIL varchar(255)
+);
 
 CREATE TABLE tickers (
     id TEXT PRIMARY KEY NOT NULL,
@@ -13,5 +13,11 @@ CREATE TABLE tickers (
     ask TEXT NOT NULL,
     volume TEXT NOT NULL,
     size TEXT
+);
+
+CREATE TABLE user_favourites (
+    id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    coin_id TEXT NOT NULL
 );
 
